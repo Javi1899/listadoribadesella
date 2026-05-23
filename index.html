@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;}
+body{background:#f0f0f0;padding:6px;}
+.main-title{text-align:center;font-size:15px;font-weight:700;background:#1a3a5c;color:#fff;padding:7px;letter-spacing:1px;margin-bottom:6px;}
+.layout{display:grid;grid-template-columns:210px 1fr 145px;gap:6px;align-items:start;height:calc(100vh - 50px);}
+.col-fixed{overflow-y:auto;max-height:100%;}
+.col-scroll{overflow-y:auto;max-height:100%;}
+.col{background:#fff;border:1px solid #bbb;border-radius:3px;padding:6px;}
+.col-title{font-weight:700;font-size:11px;background:#1a3a5c;color:#fff;text-align:center;padding:4px;margin:-6px -6px 6px;border-radius:3px 3px 0 0;letter-spacing:0.5px;}
+
+/* PERSONAL */
+.cat-label{font-size:9.5px;font-weight:700;color:#555;margin:5px 0 2px;padding-left:2px;text-transform:uppercase;letter-spacing:0.4px;border-bottom:1px solid #eee;}
+.person{padding:3px 6px;margin:1px 0;border-radius:2px;cursor:grab;font-size:11px;font-weight:600;border:1px solid rgba(0,0,0,0.12);user-select:none;}
+.person:active{cursor:grabbing;opacity:0.6;}
+.person.dragging{opacity:0.35;}
+.peon{background:#fffacd;color:#7a6000;}
+.peon-conductor{background:#d4edda;color:#155724;}
+.conductor{background:#cce5ff;color:#004085;}
+.ayto{background:#e8d5ff;color:#4b0082;}
+.taller{background:#d2a679;color:#4a2500;}
+.jefe{background:#f8d7da;color:#721c24;}
+
+/* PLANILLA */
+.fecha-bar{display:flex;align-items:center;gap:5px;margin-bottom:6px;position:relative;}
+.fecha-bar input{border:1px solid #ccc;padding:3px 5px;border-radius:2px;font-size:11px;width:160px;font-style:italic;}
+#cal-btn{background:#1a3a5c;color:#fff;border:none;padding:3px 7px;border-radius:2px;cursor:pointer;font-size:10px;white-space:nowrap;}
+.cal-popup{display:none;position:absolute;top:28px;left:0;background:#fff;border:1px solid #bbb;border-radius:3px;padding:7px;z-index:999;box-shadow:2px 3px 10px rgba(0,0,0,0.2);min-width:210px;}
+.cal-popup.open{display:block;}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.cal-header button{background:none;border:none;cursor:pointer;font-size:15px;padding:0 3px;color:#1a3a5c;}
+.cal-header span{font-weight:700;font-size:11px;color:#1a3a5c;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;}
+.cal-grid .dn{font-size:9px;font-weight:700;color:#666;padding:2px 0;}
+.cal-grid .cd{font-size:10px;padding:3px 2px;border-radius:2px;cursor:pointer;}
+.cal-grid .cd:hover{background:#1a3a5c;color:#fff;}
+.cal-grid .cd.hoy{background:#ddeeff;font-weight:700;}
+.cal-grid .cd.sel{background:#1a3a5c;color:#fff;}
+.cal-grid .emp{cursor:default;}
+
+/* CABECERA */
+.fcc-header{display:flex;align-items:center;gap:8px;margin-bottom:5px;border-bottom:2px solid #1a3a5c;padding-bottom:4px;}
+.fcc-logo{width:44px;height:36px;flex-shrink:0;}
+.fcc-titles{flex:1;}
+.fcc-doc-title{font-size:12px;font-weight:700;color:#1a3a5c;text-decoration:underline;font-style:italic;}
+.fcc-date{font-size:10px;color:#333;font-style:italic;}
+
+/* TABLA: 3 columnas: Nº | NOMBRE | CATEGORÍA */
+.plan-table{width:100%;border-collapse:collapse;font-size:11px;}
+.plan-table td{border:1px solid #333;padding:1px 3px;height:20px;vertical-align:middle;}
+.plan-table td.num-cell{width:22px;text-align:center;font-weight:700;color:#1a3a5c;background:#f0f4f8;font-size:10px;}
+.plan-table td.nombre-cell{width:62%;position:relative;}
+.plan-table td.nombre-cell.over{background:#e0f7fa;}
+.plan-table td.nombre-cell.fijo{background:#fff8e1;font-weight:700;font-size:11px;color:#7a6000;}
+.plan-table td.cat-cell{width:28%;font-weight:700;font-size:10px;color:#1a3a5c;}
+.plan-table tr.sec-row td{font-weight:700;font-size:11px;color:#000;text-decoration:underline;background:#fff;padding:2px 4px;}
+.name-chip{display:inline-block;padding:1px 5px;border-radius:2px;font-size:10.5px;font-weight:700;cursor:grab;border:1px solid rgba(0,0,0,0.1);white-space:nowrap;}
+.name-chip:active{cursor:grabbing;}
+
+/* BOTONES */
+.btn-panel{display:flex;flex-direction:column;gap:5px;}
+.btn-panel button{width:100%;padding:7px 5px;border:none;border-radius:3px;font-weight:700;font-size:10.5px;cursor:pointer;letter-spacing:0.2px;}
+.btn-panel button:hover{filter:brightness(0.88);}
+.btn-add{background:#28a745;color:#fff;}
+.btn-del{background:#dc3545;color:#fff;}
+.btn-save{background:#007bff;color:#fff;}
+.btn-clean{background:#fd7e14;color:#fff;}
+.btn-xls{background:#1d6f42;color:#fff;font-size:11px;padding:9px 5px;}
+
+/* MODALES */
+.modal-bg{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:5px;padding:14px;min-width:250px;}
+.modal h3{font-size:12px;font-weight:700;margin-bottom:9px;color:#1a3a5c;}
+.modal input,.modal select{width:100%;border:1px solid #ccc;padding:4px 7px;border-radius:2px;margin-bottom:7px;font-size:11px;}
+.modal-btns{display:flex;gap:7px;justify-content:flex-end;}
+.modal-btns button{padding:4px 11px;border:none;border-radius:2px;cursor:pointer;font-size:11px;font-weight:600;}
+.modal-ok{background:#28a745;color:#fff;}
+.modal-cancel{background:#6c757d;color:#fff;}
+.color-prev{width:100%;height:18px;border-radius:2px;margin-bottom:7px;border:1px solid #ccc;}
+</style>
+</head>
+<body>
+<div class="main-title">&#128197; LISTADO PERSONAL RIBADESELLA</div>
+<div class="layout">
+
+<!-- COL 1 -->
+<div class="col col-fixed" id="col-personal">
+  <div class="col-title">PERSONAL</div>
+  <div id="lista-personal"></div>
+</div>
+
+<!-- COL 2 -->
+<div class="col col-scroll">
+  <div class="col-title">PLANILLA DE TRABAJO</div>
+  <div class="fecha-bar">
+    <button id="cal-btn">&#128197; Fecha</button>
+    <input type="text" id="fecha-input" placeholder="Seleccionar fecha..." readonly>
+    <div class="cal-popup" id="cal-popup">
+      <div class="cal-header">
+        <button id="cal-prev">&#8249;</button>
+        <span id="cal-lbl"></span>
+        <button id="cal-next">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+
+  <div class="fcc-header">
+    <svg class="fcc-logo" viewBox="0 0 80 65" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="80" height="65" fill="white"/>
+      <polygon points="38,2 52,2 44,14 58,14 36,38 42,24 28,24" fill="#e8000d"/>
+      <polygon points="50,2 64,2 56,14 70,14 48,38 54,24 40,24" fill="#e8000d" opacity="0.7"/>
+      <text x="4" y="52" font-family="Arial" font-weight="900" font-size="18" fill="#1a3a8c">FCC</text>
+      <rect x="4" y="55" width="72" height="2" fill="#1a6b2a"/>
+      <text x="4" y="63" font-family="Arial" font-size="6" fill="#1a6b2a">Medio Ambiente, S.A.U.</text>
+    </svg>
+    <div class="fcc-titles">
+      <div class="fcc-doc-title">LISTADO DE PERSONAL DE RIBADESELLA</div>
+      <div class="fcc-date" id="doc-fecha"></div>
+    </div>
+  </div>
+
+  <table class="plan-table" id="plan-table">
+    <tbody id="plan-body"></tbody>
+  </table>
+</div>
+
+<!-- COL 3 -->
+<div class="col col-fixed">
+  <div class="col-title">ACCIONES</div>
+  <div class="btn-panel">
+    <button class="btn-add" onclick="openAdd()">&#43; AÑADIR NOMBRE</button>
+    <button class="btn-del" onclick="openDel()">&#10005; ELIMINAR NOMBRE</button>
+    <button class="btn-save" onclick="guardar()">&#128190; GUARDAR CAMBIOS</button>
+    <button class="btn-clean" onclick="limpiar()">&#9100; LIMPIAR</button>
+    <button class="btn-xls" onclick="descargarExcel()">&#8659; DESCARGAR EXCEL</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL AÑADIR -->
+<div class="modal-bg" id="modal-add">
+  <div class="modal">
+    <h3>Añadir operario</h3>
+    <input type="text" id="add-nombre" placeholder="Nombre completo (MAYÚSCULAS)">
+    <select id="add-cat" onchange="updatePrev()">
+      <option value="peon">PEÓN</option>
+      <option value="peon-conductor">PEÓN CONDUCTOR</option>
+      <option value="conductor">CONDUCTOR</option>
+      <option value="ayto">PEÓN AYTO.</option>
+      <option value="taller">TALLER</option>
+      <option value="jefe">JEFE DE EQUIPO</option>
+    </select>
+    <div class="color-prev" id="color-prev"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('modal-add')">Cancelar</button>
+      <button class="modal-ok" onclick="addPersona()">Añadir</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR -->
+<div class="modal-bg" id="modal-del">
+  <div class="modal">
+    <h3>Eliminar operario</h3>
+    <select id="del-sel"></select>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('modal-del')">Cancelar</button>
+      <button class="modal-ok" style="background:#dc3545" onclick="delPersona()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const C = {
+  peon:{bg:'#fffacd',color:'#7a6000',label:'PEÓN'},
+  'peon-conductor':{bg:'#d4edda',color:'#155724',label:'PEÓN CONDUCTOR'},
+  conductor:{bg:'#cce5ff',color:'#004085',label:'CONDUCTOR'},
+  ayto:{bg:'#e8d5ff',color:'#4b0082',label:'AYTO.'},
+  taller:{bg:'#d2a679',color:'#4a2500',label:'TALLER'},
+  jefe:{bg:'#f8d7da',color:'#721c24',label:'JEFE EQUIPO'}
+};
+
+const ENCARGADO_FIJO = 'RAFAEL GARCIA GIRALDO';
+
+const SECCIONES = [
+  {t:'ENCARGADO', filas:[{cat:'',fijo:ENCARGADO_FIJO},{cat:''}]},
+  {t:'COLOCACION  DE CUBOS Y R.B.N.U.', filas:[{cat:'CONDUCTOR'},{cat:'PEÓN'},{cat:'PEÓN'},{cat:''},{cat:''}]},
+  {t:'RECOGIDA  DE BASURA RURAL DIURNA', filas:[{cat:'CONDUCTOR'},{cat:''},{cat:''}]},
+  {t:'RECOGIDA  RURAL REFUERZO Y COMERCIOS', filas:[{cat:'CONDUCTOR'},{cat:''},{cat:''},{cat:''}]},
+  {t:'RECOGIDA  RURAL DIFICIL ACCESO - COMPACAR', filas:[{cat:'CONDUCTOR'},{cat:'PEÓN'},{cat:''},{cat:''},{cat:''}]},
+  {t:'MEDIA JORNADA CON BALDEO TANGENCIAL', filas:[{cat:'CONDUCTOR'},{cat:'PEÓN'},{cat:''},{cat:''},{cat:''}]},
+  {t:'BALDEO ALTA PRESION / MEDIA JORNADA CON BALDEO TANGENCIA', filas:[{cat:'CONDUCTOR'},{cat:''},{cat:''}]},
+  {t:'BARRIDO MECANICO / MEDIA JORNADA DE BARREDORA Y LMV', filas:[{cat:'CONDUCTOR'},{cat:''},{cat:''}]},
+  {t:'LIMPIAFACHADAS', filas:[{cat:'PORTER'},{cat:''},{cat:''}]},
+  {t:'VARIOS TRABAJOS', filas:[{cat:''},{cat:''},{cat:''}]},
+  {t:'LIMPIEZA DE AREAS Y REPASO  (VIERNES-SABADO Y DOMINGO)', filas:[{cat:''},{cat:''},{cat:''},{cat:''}]},
+  {t:'FREGADORA DECAPADORA CMAR', filas:[{cat:''},{cat:''}]},
+  {t:'TRABAJOS DESBROCES VARIOS', filas:[{cat:''},{cat:''},{cat:''},{cat:''}]},
+  {t:'JEFE DE EQUIPO', filas:[{cat:''},{cat:''}]},
+  {t:'TALLER', filas:[{cat:''},{cat:''}]},
+  {t:'DESCANSOS', filas:[{cat:''},{cat:''},{cat:''},{cat:''},{cat:''}]},
+  {t:'VACACIONES', filas:[{cat:''},{cat:''},{cat:''},{cat:''},{cat:''}]},
+  {t:'BAJA ENFERMEDAD', filas:[{cat:''},{cat:''},{cat:''},{cat:''},{cat:''},{cat:''}]},
+  {t:'FALTAS AL TRABAJO', filas:[{cat:''},{cat:''},{cat:''},{cat:''}]},
+  {t:'PERMISOS', filas:[{cat:''},{cat:''},{cat:''}]},
+  {t:'HORAS EXTRAS', filas:[{cat:''},{cat:''},{cat:''}]},
+  {t:'BAJA EMPRESA', filas:[{cat:'AYTO.'},{cat:'AYTO.'},{cat:''},{cat:''},{cat:''},{cat:''}]},
+  {t:'OTROS', filas:[{cat:''},{cat:''},{cat:''}]}
+];
+
+let personal = [
+  {n:'EDUARDO MANUEL ALVAREZ AVIN',c:'jefe'},
+  {n:'YURY PANKOTAI',c:'conductor'},
+  {n:'SAMUEL VILA PEREZ',c:'conductor'},
+  {n:'LUIS ALBERTO LABRA SOLIS',c:'conductor'},
+  {n:'GINES RUIZ ESCOLANO',c:'conductor'},
+  {n:'LUIS ANGEL RUENES ARGUELLES',c:'conductor'},
+  {n:'JOSE LUIS ACEVEDO PARAJON',c:'peon-conductor'},
+  {n:'AARON GONZALEZ BRAÑA',c:'peon-conductor'},
+  {n:'JESUS JIMENEZ ALVAREZ',c:'peon-conductor'},
+  {n:'ALVARO VALLE RODRIGUEZ',c:'peon-conductor'},
+  {n:'RAMON ELIAS ROSETE ARMINIO',c:'peon-conductor'},
+  {n:'ANDRES CALLEJA DEL CAMPO',c:'peon'},
+  {n:'JOSE IGNACIO RUBIO QUESADA',c:'peon'},
+  {n:'JULIO PENDAS SANCHEZ',c:'peon'},
+  {n:'FELIX GARCIA FERNANDEZ',c:'peon'},
+  {n:'MBAYE KAERE',c:'peon'},
+  {n:'LUIS MIGUEL GARCIA VALDEON',c:'peon'},
+  {n:'ANTONIO ARDISANA RIVERO',c:'ayto'},
+  {n:'THOMAS FERREIRA BERNASCONI',c:'ayto'},
+  {n:'FRANCISCO CAYADO ALONSO',c:'taller'}
+];
+
+let planilla = {};
+let dragSrc = null, dragSrcKey = null, dragSrcType = null;
+
+function nombresEnPlanilla(){
+  return new Set(Object.values(planilla));
+}
+
+function renderPersonal(){
+  const div = document.getElementById('lista-personal');
+  div.innerHTML = '';
+  const usados = nombresEnPlanilla();
+  const orden = ['jefe','conductor','peon-conductor','peon','ayto','taller'];
+  orden.forEach(cat => {
+    const items = personal.filter(p => p.c === cat && !usados.has(p.n));
+    if(!items.length) return;
+    const lbl = document.createElement('div');
+    lbl.className = 'cat-label';
+    lbl.textContent = C[cat].label;
+    div.appendChild(lbl);
+    items.forEach(p => {
+      const el = document.createElement('div');
+      el.className = 'person ' + cat;
+      el.textContent = p.n;
+      el.draggable = true;
+      el.dataset.nombre = p.n;
+      el.addEventListener('dragstart', e => {
+        dragSrc = p.n; dragSrcType = 'lista'; dragSrcKey = null;
+        e.dataTransfer.setData('text/plain', p.n);
+        setTimeout(() => el.classList.add('dragging'), 0);
+      });
+      el.addEventListener('dragend', () => el.classList.remove('dragging'));
+      div.appendChild(el);
+    });
+  });
+}
+
+function renderPlanilla(){
+  const tbody = document.getElementById('plan-body');
+  tbody.innerHTML = '';
+
+  SECCIONES.forEach(sec => {
+    const tr = document.createElement('tr');
+    tr.className = 'sec-row';
+    const tdBlank = document.createElement('td'); tdBlank.textContent = '';
+    const tdTit = document.createElement('td'); tdTit.colSpan = 2; tdTit.textContent = sec.t;
+    tr.appendChild(tdBlank);
+    tr.appendChild(tdTit);
+    tbody.appendChild(tr);
+
+    sec.filas.forEach((fila, i) => {
+      const key = sec.t + '|' + i;
+      const tr2 = document.createElement('tr');
+
+      const tdNum = document.createElement('td');
+      tdNum.className = 'num-cell';
+
+      const tdN = document.createElement('td');
+      tdN.className = 'nombre-cell';
+      tdN.dataset.key = key;
+
+      if(fila.fijo){
+        tdN.classList.add('fijo');
+        tdN.textContent = fila.fijo;
+        tdNum.textContent = '';
+      } else {
+        if(planilla[key]){
+          const nombre = planilla[key];
+          const per = personal.find(x => x.n === nombre);
+          const cat = per ? per.c : 'peon';
+          const chip = document.createElement('span');
+          chip.className = 'name-chip ' + cat;
+          chip.style.background = C[cat].bg;
+          chip.style.color = C[cat].color;
+          chip.textContent = nombre;
+          chip.draggable = true;
+          chip.addEventListener('dragstart', e => {
+            dragSrc = nombre; dragSrcType = 'planilla'; dragSrcKey = key;
+            e.dataTransfer.setData('text/plain', nombre);
+          });
+          tdN.appendChild(chip);
+          tdNum.textContent = '1';
+        }
+        tdN.addEventListener('dragover', e => { e.preventDefault(); tdN.classList.add('over'); });
+        tdN.addEventListener('dragleave', () => tdN.classList.remove('over'));
+        tdN.addEventListener('drop', e => {
+          e.preventDefault();
+          tdN.classList.remove('over');
+          const nombre = e.dataTransfer.getData('text/plain');
+          const destKey = tdN.dataset.key;
+          const prev = planilla[destKey] || null;
+          if(dragSrcType === 'planilla' && dragSrcKey && dragSrcKey !== destKey){
+            if(prev) planilla[dragSrcKey] = prev;
+            else delete planilla[dragSrcKey];
+          }
+          planilla[destKey] = nombre;
+          dragSrcKey = null;
+          renderPersonal();
+          renderPlanilla();
+        });
+      }
+
+      const tdC = document.createElement('td');
+      tdC.className = 'cat-cell';
+      tdC.textContent = fila.cat || '';
+
+      tr2.appendChild(tdNum);
+      tr2.appendChild(tdN);
+      tr2.appendChild(tdC);
+      tbody.appendChild(tr2);
+    });
+  });
+}
+
+function limpiar(){
+  planilla = {};
+  renderPersonal();
+  renderPlanilla();
+}
+
+function guardar(){
+  try{
+    localStorage.setItem('riba_personal', JSON.stringify(personal));
+    localStorage.setItem('riba_planilla', JSON.stringify(planilla));
+  }catch(e){}
+  alert('✅ Cambios guardados.');
+}
+
+function openAdd(){
+  document.getElementById('add-nombre').value = '';
+  document.getElementById('add-cat').value = 'peon';
+  updatePrev();
+  document.getElementById('modal-add').classList.add('open');
+}
+function updatePrev(){
+  const cat = document.getElementById('add-cat').value;
+  document.getElementById('color-prev').style.background = C[cat].bg;
+}
+function addPersona(){
+  const n = document.getElementById('add-nombre').value.trim().toUpperCase();
+  const c = document.getElementById('add-cat').value;
+  if(!n){ alert('Introduce un nombre.'); return; }
+  if(personal.find(x => x.n === n)){ alert('Ya existe.'); return; }
+  personal.push({n, c});
+  renderPersonal();
+  closeModal('modal-add');
+}
+function openDel(){
+  const sel = document.getElementById('del-sel');
+  sel.innerHTML = '';
+  personal.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.n;
+    opt.textContent = p.n + ' (' + C[p.c].label + ')';
+    sel.appendChild(opt);
+  });
+  document.getElementById('modal-del').classList.add('open');
+}
+function delPersona(){
+  const n = document.getElementById('del-sel').value;
+  personal = personal.filter(x => x.n !== n);
+  Object.keys(planilla).forEach(k => { if(planilla[k] === n) delete planilla[k]; });
+  renderPersonal(); renderPlanilla();
+  closeModal('modal-del');
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+let calFecha = new Date();
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DIAS_S = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+
+function renderCal(){
+  const y = calFecha.getFullYear(), m = calFecha.getMonth();
+  document.getElementById('cal-lbl').textContent = MESES[m] + ' ' + y;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  ['L','M','X','J','V','S','D'].forEach(d => {
+    const c = document.createElement('div'); c.className = 'dn'; c.textContent = d; grid.appendChild(c);
+  });
+  let dow = new Date(y, m, 1).getDay(); dow = (dow + 6) % 7;
+  for(let i = 0; i < dow; i++){ const e = document.createElement('div'); e.className = 'emp'; grid.appendChild(e); }
+  const dias = new Date(y, m + 1, 0).getDate();
+  const hoy = new Date();
+  for(let d = 1; d <= dias; d++){
+    const c = document.createElement('div'); c.className = 'cd'; c.textContent = d;
+    if(hoy.getFullYear()===y && hoy.getMonth()===m && hoy.getDate()===d) c.classList.add('hoy');
+    c.addEventListener('click', () => {
+      const sel = new Date(y, m, d);
+      const txt = DIAS_S[sel.getDay()].toUpperCase() + ' - ' + String(d).padStart(2,'0') + ' - ' + MESES[m].toUpperCase() + ' - ' + y;
+      document.getElementById('fecha-input').value = txt;
+      document.getElementById('doc-fecha').textContent = txt;
+      document.getElementById('cal-popup').classList.remove('open');
+    });
+    grid.appendChild(c);
+  }
+}
+
+document.getElementById('cal-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  const p = document.getElementById('cal-popup');
+  p.classList.toggle('open');
+  if(p.classList.contains('open')) renderCal();
+});
+document.getElementById('cal-prev').addEventListener('click', () => { calFecha.setMonth(calFecha.getMonth()-1); renderCal(); });
+document.getElementById('cal-next').addEventListener('click', () => { calFecha.setMonth(calFecha.getMonth()+1); renderCal(); });
+document.addEventListener('click', e => {
+  const p = document.getElementById('cal-popup');
+  if(!p.contains(e.target) && e.target.id !== 'cal-btn') p.classList.remove('open');
+});
+
+function descargarExcel(){
+  const wb = XLSX.utils.book_new();
+  const fecha = document.getElementById('fecha-input').value || 'Sin fecha';
+  const rows = [
+    ['FCC Medio Ambiente, S.A.U.'],
+    ['LISTADO DE PERSONAL DE RIBADESELLA  -  ' + fecha],
+    [],
+    ['Nº', 'OPERARIO ASIGNADO', 'CATEGORÍA / PUESTO']
+  ];
+  SECCIONES.forEach(sec => {
+    rows.push(['', sec.t, '']);
+    sec.filas.forEach((fila, i) => {
+      if(fila.fijo){
+        rows.push(['', fila.fijo, fila.cat || '']);
+      } else {
+        const key = sec.t + '|' + i;
+        const nombre = planilla[key] || '';
+        const per = personal.find(x => x.n === nombre);
+        const catLabel = per ? C[per.c].label : '';
+        rows.push([nombre ? '1' : '', nombre, fila.cat || catLabel]);
+      }
+    });
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:4},{wch:40},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Listado Ribadesella');
+  XLSX.writeFile(wb, 'Listado_Personal_Ribadesella.xlsx');
+}
+
+try{
+  const sp = localStorage.getItem('riba_personal');
+  const spl = localStorage.getItem('riba_planilla');
+  if(sp) personal = JSON.parse(sp);
+  if(spl) planilla = JSON.parse(spl);
+}catch(e){}
+
+renderPersonal();
+renderPlanilla();
+updatePrev();
+</script>
+</body>
+</html>
