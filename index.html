@@ -59,6 +59,8 @@ body{background:#f0f0f0;padding:6px;}
 .plan-table tr.sec-row td{font-weight:700;font-size:11px;color:#000;text-decoration:underline;background:#fff;padding:2px 4px;}
 .name-chip{display:inline-block;padding:1px 5px;border-radius:2px;font-size:10.5px;font-weight:700;cursor:grab;border:1px solid rgba(0,0,0,0.1);white-space:nowrap;}
 .name-chip:active{cursor:grabbing;}
+.chip-remove{display:inline-block;margin-left:4px;color:inherit;opacity:0.5;font-size:10px;font-weight:900;cursor:pointer;line-height:1;}
+.chip-remove:hover{opacity:1;color:#c00;}
 
 /* BOTONES */
 .btn-panel{display:flex;flex-direction:column;gap:5px;}
@@ -316,6 +318,17 @@ function renderPlanilla(){
             dragSrc = nombre; dragSrcType = 'planilla'; dragSrcKey = key;
             e.dataTransfer.setData('text/plain', nombre);
           });
+          const btnX = document.createElement('span');
+          btnX.className = 'chip-remove';
+          btnX.textContent = '✕';
+          btnX.title = 'Devolver a lista';
+          btnX.addEventListener('click', e => {
+            e.stopPropagation();
+            delete planilla[key];
+            renderPersonal();
+            renderPlanilla();
+          });
+          chip.appendChild(btnX);
           tdN.appendChild(chip);
           tdNum.textContent = '1';
         }
