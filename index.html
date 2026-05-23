@@ -388,8 +388,9 @@ document.addEventListener('click',e=>{
 // ─────────────────────────────────────────────────────────────────
 async function descargarExcel(){
   const fecha = document.getElementById('fecha-input').value || 'Sin fecha';
+  const nombreHoja = fecha.replace(/[\/\\:*?'"<>|]/g,'').trim().substring(0,31);
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Listado Ribadesella');
+  const ws = wb.addWorksheet(nombreHoja);
 
   // Paleta ARGB
   const NAVY   = 'FF0D1B2A';
@@ -530,7 +531,7 @@ async function descargarExcel(){
         const catLabel = fila.cat||(per?C[per.c].label:'');
 
         const ca=ws.getCell(`A${r}`);
-        ca.value=idx;
+        ca.value=nombre?1:'';
         ca.font={name:'Calibri',size:9,bold:true,color:{argb:'FF1B3A5C'}};
         setFill(ca,bg_a); ca.border=brd;
         ca.alignment={horizontal:'center',vertical:'middle'};
@@ -570,7 +571,7 @@ async function descargarExcel(){
   const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href=url; a.download='Listado_Personal_Ribadesella_PRO.xlsx';
+  a.href=url; a.download=nombreHoja+'_PRO.xlsx';
   a.click(); URL.revokeObjectURL(url);
 }
 
