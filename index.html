@@ -384,186 +384,192 @@ document.addEventListener('click',e=>{
 });
 
 // ─────────────────────────────────────────────────────────────────
-//  DESCARGAR EXCEL — Maquetado profesional con ExcelJS
+//  DESCARGAR EXCEL — Plantilla fiel al MD (sin colores, solo bordes)
 // ─────────────────────────────────────────────────────────────────
 async function descargarExcel(){
-  const fecha = document.getElementById('fecha-input').value || 'Sin fecha';
-  const nombreHoja = fecha.replace(/[\/\\:*?'"<>|]/g,'').trim().substring(0,31);
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet(nombreHoja);
+  const fecha     = document.getElementById('fecha-input').value || 'Sin fecha';
+  const sheetName = fecha.replace(/[\/\\:*?'"<>|]/g,'').trim().substring(0,31);
+  const wb        = new ExcelJS.Workbook();
+  const ws        = wb.addWorksheet(sheetName);
 
-  // Paleta ARGB
-  const NAVY   = 'FF0D1B2A';
-  const BLUE_M = 'FF1B3A5C';
-  const BLUE_A = 'FF1565C0';
-  const CYAN   = 'FF00BCD4';
-  const WHITE  = 'FFFFFFFF';
-  const SUB    = 'FF90CAF9';
-  const GR_L   = 'FFE8EEF4';
-  const GR_D   = 'FFDCE9F7';
-  const GR_N   = 'FFEBF3FC';
-  const GR_B   = 'FFB0BEC5';
-  const DARK   = 'FF0D1B2A';
-
-  // Color de sección
-  function secBg(t){
-    const u=t.toUpperCase();
-    if(/ENCARGADO|JEFE|CUBOS/.test(u))      return 'FF0D3B6E';
-    if(/RECOGIDA|DESBROCE/.test(u))          return 'FF1B5E20';
-    if(/BALDEO|FREGADORA/.test(u))           return 'FF006064';
-    if(/BARRIDO/.test(u))                    return 'FF1A237E';
-    return 'FF37474F';
-  }
-
-  // Colores estados especiales
-  const STA_MAP = {
-    'DESCANSOS':'FF1B5E20','VACACIONES':'FFE65100',
-    'BAJA ENFERMEDAD':'FFB71C1C','FALTAS AL TRABAJO':'FF6A1B9A',
-    'PERMISOS':'FF01579B','HORAS EXTRAS':'FF004D40',
-    'BAJA EMPRESA':'FF3E2723','OTROS':'FF263238'
-  };
-  const isSta  = t => !!STA_MAP[t.trim()];
-  const staBg  = t => STA_MAP[t.trim()]||'FF263238';
-
-  // Helpers
-  const setFill = (c,argb) => { c.fill={type:'pattern',pattern:'solid',fgColor:{argb}}; };
-  const sd      = (st,argb) => ({style:st,color:{argb}});
-  const tBrd    = () => { const s=sd('thin',GR_B); return {left:s,right:s,top:s,bottom:s}; };
-  const mBrd    = argb => {
-    const m=sd('medium',argb), n=sd('thin','FF000000');
-    return {top:m,left:m,right:m,bottom:n};
-  };
-
-  // Anchos de columna
+  // Anchos exactos del MD
   ws.getColumn('A').width = 5;
   ws.getColumn('B').width = 52;
   ws.getColumn('C').width = 22;
 
+  // Bordes reutilizables
+  const T  = {style:'thin',   color:{argb:'FF000000'}};
+  const M  = {style:'medium', color:{argb:'FF000000'}};
+  const tBrd = () => ({left:T,right:T,top:T,bottom:T});
+  const mBrd = () => ({left:M,right:M,top:M,bottom:M});
+
   let r = 1;
 
-  // ── F1: Empresa ──────────────────────────────────────────────
+  // ── F1 (h=30): Empresa ────────────────────────────────────────
   ws.mergeCells(`A${r}:C${r}`);
   let c = ws.getCell(`A${r}`);
   c.value = 'FCC Medio Ambiente, S.A.U.';
-  c.font = {name:'Calibri',size:13,bold:true,color:{argb:WHITE}};
-  setFill(c,NAVY); c.alignment={horizontal:'center',vertical:'middle'};
-  ws.getRow(r).height=30; r++;
+  c.font  = {name:'Calibri',size:13,bold:true};
+  c.alignment = {horizontal:'center',vertical:'middle'};
+  c.border = tBrd();
+  ws.getRow(r).height = 30; r++;
 
-  // ── F2: Título + fecha ────────────────────────────────────────
+  // ── F2 (h=34): Título + fecha ─────────────────────────────────
   ws.mergeCells(`A${r}:C${r}`);
   c = ws.getCell(`A${r}`);
-  c.value = 'LISTADO DE PERSONAL DE RIBADESELLA  ·  '+fecha;
-  c.font = {name:'Calibri',size:14,bold:true,color:{argb:CYAN}};
-  setFill(c,NAVY); c.alignment={horizontal:'center',vertical:'middle'};
-  ws.getRow(r).height=34; r++;
+  c.value = 'LISTADO DE PERSONAL DE RIBADESELLA  ·  ' + fecha;
+  c.font  = {name:'Calibri',size:14,bold:true};
+  c.alignment = {horizontal:'center',vertical:'middle'};
+  c.border = tBrd();
+  ws.getRow(r).height = 34; r++;
 
-  // ── F3: Encargado ─────────────────────────────────────────────
+  // ── F3 (h=22): Fila vacía separadora ─────────────────────────
   ws.mergeCells(`A${r}:C${r}`);
-  c = ws.getCell(`A${r}`);
-  c.value = 'Encargado: '+ENCARGADO_FIJO;
-  c.font = {name:'Calibri',size:11,color:{argb:SUB}};
-  setFill(c,BLUE_M); c.alignment={horizontal:'center',vertical:'middle'};
-  ws.getRow(r).height=22; r++;
+  ws.getCell(`A${r}`).border = tBrd();
+  ws.getRow(r).height = 22; r++;
 
-  // ── F4: Cabeceras de columna ──────────────────────────────────
+  // ── F4 (h=22): Cabeceras de columna ──────────────────────────
   [['A','Nº'],['B','OPERARIO ASIGNADO'],['C','CATEGORÍA / PUESTO']].forEach(([col,lbl])=>{
     c = ws.getCell(`${col}${r}`);
-    c.value=lbl;
-    c.font={name:'Calibri',size:10,bold:true,color:{argb:WHITE}};
-    setFill(c,BLUE_A); c.alignment={horizontal:'center',vertical:'middle'};
-    const m=sd('medium',CYAN); c.border={left:m,right:m,top:m,bottom:m};
+    c.value = lbl;
+    c.font  = {name:'Calibri',size:10,bold:true};
+    c.alignment = {horizontal:'center',vertical:'middle'};
+    c.border = tBrd();
   });
-  ws.getRow(r).height=22; r++;
+  ws.getRow(r).height = 22; r++;
 
-  // ── F5: Separador BLK ─────────────────────────────────────────
-  ['A','B','C'].forEach(col=>setFill(ws.getCell(`${col}${r}`),NAVY));
-  ws.getRow(r).height=6; r++;
+  // ── F5 (h=6): Separador fino (solo borde top) ─────────────────
+  ['A','B','C'].forEach(col => { ws.getCell(`${col}${r}`).border = {top:T}; });
+  ws.getRow(r).height = 6; r++;
 
-  // Freeze + sin cuadrícula
-  ws.views=[{state:'frozen',ySplit:r-1,showGridLines:false}];
+  // Inmovilizar desde fila 6; cuadrícula visible (defecto)
+  ws.views = [{state:'frozen', ySplit:5}];
 
-  // ── SECCIONES ─────────────────────────────────────────────────
-  SECCIONES.forEach(sec=>{
-    const titulo = sec.t;
-    const sta    = isSta(titulo);
-    const bg     = sta ? staBg(titulo) : secBg(titulo);
-    const prefix = sta ? '  \u25C6  ' : '  \uD83D\uDD39  ';
-    const bColor = sta ? WHITE : bg;
+  // ── Estructura de secciones según MD ──────────────────────────
+  // k = clave en SECCIONES para buscar planilla[k+'|'+i]
+  const XL = [
+    {t:'        ENCARGADO',                                                 k:'ENCARGADO',
+      filas:[{fijo:ENCARGADO_FIJO,cat:''},{cat:''}]},
+    {t:'        COLOCACION  DE CUBOS Y R.B.N.U.',                          k:'COLOCACION  DE CUBOS Y R.B.N.U.',
+      filas:[{cat:'CONDUCTOR'},{cat:'PEÓN'},{cat:'PEÓN'}]},
+    {t:'        RECOGIDA  DE BASURA RURAL DIURNA',                         k:'RECOGIDA  DE BASURA RURAL DIURNA',
+      filas:[{cat:'CONDUCTOR'},{cat:''},{cat:''}]},
+    {t:'        RECOGIDA  RURAL REFUERZO Y COMERCIOS',                     k:'RECOGIDA  RURAL REFUERZO Y COMERCIOS',
+      filas:[{cat:'CONDUCTOR'},{cat:''}]},
+    {t:'        RECOGIDA  RURAL DIFICIL ACCESO - COMPACAR',                k:'RECOGIDA  RURAL DIFICIL ACCESO - COMPACAR',
+      filas:[{cat:'CONDUCTOR'},{cat:'PEÓN'}]},
+    {t:'        MEDIA JORNADA CON BALDEO TANGENCIAL',                      k:'MEDIA JORNADA CON BALDEO TANGENCIAL',
+      filas:[{cat:'CONDUCTOR'},{cat:'PEÓN'}]},
+    {t:'         BARRIDO MANUAL RIBADESELLA',                              k:'BARRIDO MANUAL RIBADESELLA',
+      filas:[{cat:'CARRITO'},{cat:'CARRITO'},{cat:'CARRITO'},{cat:'PORTER'},{cat:''},{cat:''}]},
+    {t:'         BALDEO ALTA PRESION / MEDIA JORNADA CON BALDEO TANGENCIA',k:'BALDEO ALTA PRESION / MEDIA JORNADA CON BALDEO TANGENCIA',
+      filas:[{cat:'CONDUCTOR'},{cat:''}]},
+    {t:'         BARRIDO MECANICO / MEDIA JORNADA DE BARREDORA Y LMV',     k:'BARRIDO MECANICO / MEDIA JORNADA DE BARREDORA Y LMV',
+      filas:[{cat:'CONDUCTOR'},{cat:''}]},
+    {t:'         LIMPIAFACHADAS',                                          k:'LIMPIAFACHADAS',
+      filas:[{cat:'PORTER'},{cat:''}]},
+    {t:'         VARIOS TRABAJOS PARA EL AYUNTAMIENTO',                    k:'VARIOS TRABAJOS',
+      filas:[{cat:'AYTO.'},{cat:'AYTO.'},{cat:''}]},
+    {t:'          LIMPIEZA DE AREAS Y REPASO  (VIERNES-SABADO Y DOMINGO)', k:'LIMPIEZA DE AREAS Y REPASO  (VIERNES-SABADO Y DOMINGO)',
+      filas:[{cat:''},{cat:''},{cat:''},{cat:''}]},
+    {t:'         FREGADORA DECAPADORA CMAR',                               k:'FREGADORA DECAPADORA CMAR',
+      filas:[{cat:'PEÓN CONDUCTOR'},{cat:''}]},
+    {t:'         TRABAJOS DESBROCES VARIOS',                               k:'TRABAJOS DESBROCES VARIOS',
+      filas:[{cat:''},{cat:''},{cat:''},{cat:''}]},
+    {t:'         JEFE DE EQUIPO',                                          k:'JEFE DE EQUIPO',
+      filas:[{cat:'JEFE EQUIPO'},{cat:''}]},
+    {t:'         TALLER',                                                  k:'TALLER',
+      filas:[{cat:'TALLER'},{cat:''}]},
+    {t:'         DESCANSOS',                                               k:'DESCANSOS',
+      filas:[{cat:''},{cat:''},{cat:''},{cat:''},{cat:''}]},
+    {t:'         VACACIONES',                                              k:'VACACIONES',
+      filas:[{cat:''},{cat:''},{cat:''},{cat:''},{cat:''}]},
+    {t:'         BAJA ENFERMEDAD',                                         k:'BAJA ENFERMEDAD',
+      filas:[{cat:''},{cat:''},{cat:''},{cat:''},{cat:''},{cat:''}]},
+    {t:'         FALTAS AL TRABAJO',                                       k:'FALTAS AL TRABAJO',
+      filas:[{cat:''},{cat:''},{cat:''},{cat:''}]},
+    {t:'          PERMISOS',                                               k:'PERMISOS',
+      filas:[{cat:''},{cat:''},{cat:''}]},
+    {t:'          HORAS EXTRAS',                                           k:'HORAS EXTRAS',
+      filas:[{cat:''},{cat:''},{cat:''}]},
+    {t:'         BAJA EMPRESA',                                            k:'BAJA EMPRESA',
+      filas:[{cat:''},{cat:''},{cat:''},{cat:''},{cat:''},{cat:''}]},
+    {t:'         OTROS',                                                   k:'OTROS',
+      filas:[{cat:''},{cat:''},{cat:''}]},
+  ];
 
-    // Header de sección
+  XL.forEach(sec => {
+    // ── Cabecera de sección (h=19, border medium, 10pt bold, izq) ──
     ws.mergeCells(`A${r}:C${r}`);
     c = ws.getCell(`A${r}`);
-    c.value = prefix+titulo;
-    c.font  = {name:'Calibri',size:10,bold:true,color:{argb:WHITE}};
-    setFill(c,bg);
-    c.alignment={horizontal:'left',vertical:'middle',indent:1};
-    c.border=mBrd(bColor);
-    ws.getRow(r).height=19; r++;
+    c.value     = sec.t;
+    c.font      = {name:'Calibri',size:10,bold:true};
+    c.alignment = {horizontal:'left',vertical:'middle'};
+    c.border    = mBrd();
+    ws.getRow(r).height = 19; r++;
 
-    // Filas de datos
-    let idx=0;
-    sec.filas.forEach((fila,i)=>{
-      idx++;
-      const key    = sec.t+'|'+i;
-      const bg_a   = idx%2===0 ? GR_N : GR_D;
-      const bg_b   = idx%2===0 ? GR_L : GR_D;
+    // ── Filas de datos (h=17, border thin) ───────────────────────
+    sec.filas.forEach((fila, i) => {
+      const key    = sec.k + '|' + i;
+      const ca     = ws.getCell(`A${r}`);
+      const cb     = ws.getCell(`B${r}`);
+      const cc     = ws.getCell(`C${r}`);
       const brd    = tBrd();
 
       if(fila.fijo){
-        const ca=ws.getCell(`A${r}`);
-        ca.value=''; setFill(ca,bg_a); ca.border=brd;
-        ca.alignment={horizontal:'center',vertical:'middle'};
+        // Encargado preimpreso
+        ca.value = '';
+        ca.font  = {name:'Calibri',size:9,bold:true};
+        ca.alignment = {horizontal:'center',vertical:'middle'};
+        ca.border = brd;
 
-        const cb=ws.getCell(`B${r}`);
-        cb.value=fila.fijo;
-        cb.font={name:'Calibri',size:10,bold:true,color:{argb:DARK}};
-        setFill(cb,bg_b); cb.border=brd;
-        cb.alignment={horizontal:'left',vertical:'middle',indent:1};
+        cb.value = fila.fijo;
+        cb.font  = {name:'Calibri',size:10,bold:true};
+        cb.alignment = {horizontal:'left',vertical:'middle'};
+        cb.border = brd;
 
-        const cc=ws.getCell(`C${r}`);
-        cc.value=fila.cat||'';
-        cc.font={name:'Calibri',size:9,bold:true,color:{argb:'FF1B3A5C'}};
-        setFill(cc,bg_b); cc.border=brd;
-        cc.alignment={horizontal:'center',vertical:'middle'};
+        cc.value = fila.cat||'';
+        cc.font  = {name:'Calibri',size:9,bold:true};
+        cc.alignment = {horizontal:'center',vertical:'middle'};
+        cc.border = brd;
       } else {
         const nombre   = planilla[key]||'';
-        const per      = personal.find(x=>x.n===nombre);
-        const catLabel = fila.cat||(per?C[per.c].label:'');
+        const catLabel = fila.cat||'';
 
-        const ca=ws.getCell(`A${r}`);
-        ca.value=nombre?1:'';
-        ca.font={name:'Calibri',size:9,bold:true,color:{argb:'FF1B3A5C'}};
-        setFill(ca,bg_a); ca.border=brd;
-        ca.alignment={horizontal:'center',vertical:'middle'};
+        ca.value = nombre ? 1 : '';
+        ca.font  = {name:'Calibri',size:9,bold:true};
+        ca.alignment = {horizontal:'center',vertical:'middle'};
+        ca.border = brd;
 
-        const cb=ws.getCell(`B${r}`);
-        cb.value=nombre;
-        cb.font={name:'Calibri',size:10,color:{argb:DARK}};
-        setFill(cb,bg_b); cb.border=brd;
-        cb.alignment={horizontal:'left',vertical:'middle',indent:1};
+        cb.value = nombre;
+        cb.font  = {name:'Calibri',size:10};
+        cb.alignment = {horizontal:'left',vertical:'middle'};
+        cb.border = brd;
 
-        const cc=ws.getCell(`C${r}`);
-        cc.value=catLabel;
-        cc.font={name:'Calibri',size:9,bold:true,color:{argb:'FF1B3A5C'}};
-        setFill(cc,bg_b); cc.border=brd;
-        cc.alignment={horizontal:'center',vertical:'middle'};
+        cc.value = catLabel;
+        cc.font  = {name:'Calibri',size:9,bold:true};
+        cc.alignment = {horizontal:'center',vertical:'middle'};
+        cc.border = brd;
       }
-      ws.getRow(r).height=17; r++;
+      ws.getRow(r).height = 17; r++;
     });
   });
 
-  // ── Footer ────────────────────────────────────────────────────
+  // ── Footer (h=16) ─────────────────────────────────────────────
   ws.mergeCells(`A${r}:C${r}`);
   c = ws.getCell(`A${r}`);
   c.value = 'FCC Medio Ambiente, S.A.U.  ·  Servicio Limpieza Viaria  ·  Ribadesella';
-  c.font  = {name:'Calibri',size:8,italic:true,color:{argb:'FF78909C'}};
-  setFill(c,NAVY); c.alignment={horizontal:'center',vertical:'middle'};
-  ws.getRow(r).height=16;
+  c.font  = {name:'Calibri',size:8,italic:true};
+  c.alignment = {horizontal:'center',vertical:'middle'};
+  ws.getRow(r).height = 16;
 
-  // ── Configuración de impresión ────────────────────────────────
-  ws.pageSetup={
-    orientation:'portrait',fitToPage:true,
-    fitToHeight:0,fitToWidth:1,printTitlesRow:'1:4'
+  // ── Configuración de página (márgenes y ajuste A4) ────────────
+  ws.pageSetup = {
+    orientation:'portrait', fitToPage:true,
+    fitToHeight:0, fitToWidth:1, printTitlesRow:'1:5'
+  };
+  ws.pageSetup.margins = {
+    left:0.7, right:0.7, top:0.75, bottom:0.75, header:0.3, footer:0.3
   };
 
   // ── Descargar ─────────────────────────────────────────────────
@@ -571,7 +577,7 @@ async function descargarExcel(){
   const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
-  a.href=url; a.download=nombreHoja+'_PRO.xlsx';
+  a.href = url; a.download = sheetName + '.xlsx';
   a.click(); URL.revokeObjectURL(url);
 }
 
